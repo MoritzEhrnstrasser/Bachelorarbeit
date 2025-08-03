@@ -368,3 +368,51 @@ summary(fit_alm)
 
 
 
+# comparing theoretical and empirical SE
+
+# Simulationsparameter
+n_sim <- 10000  # Anzahl der Simulationen
+N <- 1000        # Stichprobengröße
+p <- 3          # Anzahl Prädiktoren
+beta <- c(1, 0.5, -0.3, 0.2)  # Wahrer Koeffizientenvektor (inkl. Intercept)
+sigma <- 1
+
+# Ergebnisse speichern
+estimates <- matrix(NA, nrow = n_sim, ncol = length(beta))
+se_theoretical <- matrix(NA, nrow = n_sim, ncol = length(beta))
+
+for (i in 1:n_sim) {
+  # Simuliere Daten
+  X <- matrix(rnorm(N * p), ncol = p)
+  Xmat <- cbind(1, X)
+  y <- Xmat %*% beta + rnorm(N, sd = sigma)
+  
+  # OLS-Schätzung via Matrix-Algebra
+  XtX_inv <- solve(crossprod(Xmat))
+  beta_hat <- XtX_inv %*% crossprod(Xmat, y)
+  y_hat <- Xmat %*% beta_hat
+  residuals <- y - y_hat
+  sigma2_hat <- sum(residuals^2) / (N - p - 1)
+  se_beta <- sqrt(diag(sigma2_hat * XtX_inv))
+  
+  # Speichern
+  estimates[i, ] <- as.vector(beta_hat)
+  se_theoretical[i, ] <- se_beta
+}
+
+# Empirischer Standardfehler = SD der Schätzungen
+se_empirical <- apply(estimates, 2, sd)
+se_theoretical_mean <- colMeans(se_theoretical)
+
+# Vergleich in DataFrame
+comparison_df <- data.frame(
+  Term = paste0("β", 0:p),
+  Empirical_SE = round(se_empirical, 4),
+  Mean_Theoretical_SE = round(se_theoretical_mean, 4)
+)
+
+print(comparison_df)
+
+
+
+
